@@ -123,8 +123,9 @@ class GMail_IMAP(imaplib.IMAP4_SSL, GMailOAuth2Mixin):
         Perform a search with GMail, and yield a tuple (metadata dict, email.Message)
         '''
         status, uids = self.gmsearch(query, folder)
-        print uids[0]
+
         uids = uids[0].split(" ")
         for uid in uids:
             #TODO: This is a great place to implement some nice error catching when Google decides to throw up errors.
-            yield self._fetch_message(uid)
+            if uid:
+                yield self._fetch_message(uid)
