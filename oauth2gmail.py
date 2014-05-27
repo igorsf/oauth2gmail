@@ -3,6 +3,7 @@ __author__ = 'Richie Foreman <richie.foreman@gmail.com>'
 import httplib2
 import imaplib
 import email
+from email.parser import HeaderParser
 from time import sleep
 from oauth2client.client import AccessTokenRefreshError
 import random
@@ -86,6 +87,18 @@ class GMail_IMAP(imaplib.IMAP4_SSL, GMailOAuth2Mixin):
 
         return self._fetch_message(uids[0])
 
+    def _fetch_header(self, uid):
+        
+        status, data = self.uid('fetch', uid , '(RFC822.HEADER)')        
+        if status != 'OK':
+            raise Exception("Error running imap fetch for message uid %s status %s", uid, status)
+        
+        header_data = data[0][1]
+        parser = HeaderParser()
+        message = parser.parsestr(header_data)
+
+        return (status, message)
+
     def _fetch_message(self, uid):
         '''
         This is a special method that takes care of fetching a message body into an email.Message object
@@ -106,7 +119,7 @@ class GMail_IMAP(imaplib.IMAP4_SSL, GMailOAuth2Mixin):
 
         return (data, message)
 
-    def gmsearch(self, query="in:anywhere", folder="[Gmail]/All Mail"):
+    def gmsearch(self, query="in:anywhere", folder="[Gmail]/All Mail", readonly=False):
         '''
         Perform a search with GMail using X-GM-RAW.
 
@@ -114,7 +127,7 @@ class GMail_IMAP(imaplib.IMAP4_SSL, GMailOAuth2Mixin):
         '''
 
         if folder:
-            self.select(folder)
+            self.select(folder, readonly)
 
         return self.uid('SEARCH', "X-GM-RAW", query)
 
@@ -129,3 +142,16 @@ class GMail_IMAP(imaplib.IMAP4_SSL, GMailOAuth2Mixin):
             #TODO: This is a great place to implement some nice error catching when Google decides to throw up errors.
             if uid:
                 yield self._fetch_message(uid)
+
+    def gmsearch_headers(self, query="in:anywhere", folder="[Gmail]/All Mail"):
+        '''
+        Perform a search with GMail, and yield a tuple (metadata dict, headers)
+        '''
+        status, uids = self.gmsearch(query, folder)
+
+        uids = uids[0].split(" ")
+        for uid in uids:
+            #TODO: This is a great place to implement some nice error catching when Google decides to throw up errors.
+            if uid:
+                yield self._fetch_header(uid)
+
