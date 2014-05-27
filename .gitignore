@@ -4,3 +4,4 @@ client_secrets.json
 privatekey.p12
 client_secret_web.txt
 .idea
+*.pyc
