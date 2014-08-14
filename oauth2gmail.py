@@ -131,11 +131,11 @@ class GMail_IMAP(imaplib.IMAP4_SSL, GMailOAuth2Mixin):
 
         return self.uid('SEARCH', "X-GM-RAW", query)
 
-    def gmsearch_messages(self, query="in:anywhere", folder="[Gmail]/All Mail"):
+    def gmsearch_messages(self, query="in:anywhere", folder="[Gmail]/All Mail", readonly=False):
         '''
         Perform a search with GMail, and yield a tuple (metadata dict, email.Message)
         '''
-        status, uids = self.gmsearch(query, folder)
+        status, uids = self.gmsearch(query, folder, readonly)
 
         uids = uids[0].split(" ")
         for uid in uids:
