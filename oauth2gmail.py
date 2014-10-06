@@ -10,6 +10,7 @@ import random
 import smtplib
 import base64
 import re
+from error import ImapError
 
 IMAP_HOST = "imap.gmail.com"
 SMTP_HOST = "smtp.gmail.com"
@@ -89,10 +90,21 @@ class GMail_IMAP(imaplib.IMAP4_SSL, GMailOAuth2Mixin):
 
     def _fetch_header(self, uid):
         
-        status, data = self.uid('fetch', uid , '(RFC822.HEADER)')        
-        if status != 'OK':
-            raise Exception("Error running imap fetch for message uid %s status %s", uid, status)
+        status, data = self.uid('fetch', uid , '(RFC822.HEADER)')
         
+        if data == [None] or status != 'OK':
+            #IMAP server says bad request or UID does not exist
+            severity = ImapError.ERROR.MESSAGE
+            reason = "IMAP server '%s' failed to fetch messages UID '%s'."\
+                "Server responded: %s %s" % (self.getrepository(), uid, status, data)
+            
+            if data == [None]:
+                #IMAP server did not find a message with this UID
+                reason = "IMAP server '%s' does not have a message "\
+                "with UID '%s'" % (self.getrepository(), uid)
+            
+            raise ImapError(reason, severity)
+                
         header_data = data[0][1]
         parser = HeaderParser()
         message = parser.parsestr(header_data)
